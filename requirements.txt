@@ -1,0 +1,4 @@
+playwright==1.44.0
+langchain-openai==0.1.8
+langchain-core==0.2.10
+python-dotenv==1.0.1

@@ -1,0 +1,10 @@
+services:
+  bot:
+    build: .
+    env_file:
+      - .env
+    network_mode: host          # чтобы достучаться до localhost:5173
+    environment:
+      - DISPLAY=:99             # виртуальный дисплей для Playwright
+    volumes:
+      - ./screenshots:/app/screenshots  # опционально: сохранять скриншоты
