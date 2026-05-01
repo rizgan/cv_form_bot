@@ -20,9 +20,11 @@ load_dotenv()
 # ──────────────────────────────────────────────
 # Настройки
 # ──────────────────────────────────────────────
-APP_URL = "http://localhost:5173/"
+APP_URL = os.getenv("APP_URL", "http://localhost:5173/")
 MAX_VERSIONS = 30          # защита от бесконечного цикла
 MODEL = "anthropic/claude-opus-4.5"  # модель для анализа
+HEADLESS = os.getenv("HEADLESS", "false").lower() in {"1", "true", "yes"}
+PAGE_LOAD_TIMEOUT_MS = int(os.getenv("PAGE_LOAD_TIMEOUT_MS", "30000"))
 
 SYSTEM_PROMPT = """
 Ты — эксперт по Playwright и веб-автоматизации.
@@ -142,12 +144,19 @@ async def wait_for_version_change(page: Page, current_version: str, timeout: int
 # ──────────────────────────────────────────────
 async def main():
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=False)  # headless=True для фона
+        print(f"Запуск бота: APP_URL={APP_URL} | HEADLESS={HEADLESS}")
+        browser = await pw.chromium.launch(headless=HEADLESS)
         context = await browser.new_context()
         page = await context.new_page()
 
-        await page.goto(APP_URL)
-        await page.wait_for_load_state("networkidle")
+        try:
+            print(f"  → Открываем страницу: {APP_URL}")
+            await page.goto(APP_URL, wait_until="domcontentloaded", timeout=PAGE_LOAD_TIMEOUT_MS)
+            await page.wait_for_selector("form", timeout=PAGE_LOAD_TIMEOUT_MS)
+        except Exception as exc:
+            print(f"  [!] Не удалось открыть форму по адресу {APP_URL}: {exc}")
+            await browser.close()
+            return
 
         for iteration in range(MAX_VERSIONS):
             # 1. Анализируем текущую версию
